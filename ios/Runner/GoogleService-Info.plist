@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CLIENT_ID</key>
+	<string>58449897299-3imbikc3948ftcuido3uu2rmf3fjv8ei.apps.googleusercontent.com</string>
+	<key>REVERSED_CLIENT_ID</key>
+	<string>com.googleusercontent.apps.58449897299-3imbikc3948ftcuido3uu2rmf3fjv8ei</string>
+	<key>ANDROID_CLIENT_ID</key>
+	<string>58449897299-dp2ed98gevcm9uq420v6s4oktf44ehem.apps.googleusercontent.com</string>
+	<key>API_KEY</key>
+	<string>AIzaSyBcizYuBSBtzv0EDOjywWYDautCpRgDyAM</string>
+	<key>GCM_SENDER_ID</key>
+	<string>58449897299</string>
+	<key>PLIST_VERSION</key>
+	<string>1</string>
+	<key>BUNDLE_ID</key>
+	<string>com.talkai.app</string>
+	<key>PROJECT_ID</key>
+	<string>talk-ai-a854c</string>
+	<key>STORAGE_BUCKET</key>
+	<string>talk-ai-a854c.appspot.com</string>
+	<key>IS_ADS_ENABLED</key>
+	<false></false>
+	<key>IS_ANALYTICS_ENABLED</key>
+	<false></false>
+	<key>IS_APPINVITE_ENABLED</key>
+	<true></true>
+	<key>IS_GCM_ENABLED</key>
+	<true></true>
+	<key>IS_SIGNIN_ENABLED</key>
+	<true></true>
+	<key>GOOGLE_APP_ID</key>
+	<string>1:58449897299:ios:c5a331c65a9d9c350623a6</string>
+</dict>
+</plist>

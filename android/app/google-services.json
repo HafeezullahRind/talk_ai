@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "223843663198",
+    "project_id": "talkai-b0c65",
+    "storage_bucket": "talkai-b0c65.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:223843663198:android:84b76eded3bd94d0bf23cf",
+        "android_client_info": {
+          "package_name": "com.talkai.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA7RDJozNdgLlSnO4r3QMtkKD1PA3O8lO8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
