@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:talk_ai/core/app_export.dart';
 import 'package:talk_ai/widgets/app_bar/appbar_leading_image.dart';
 import 'package:talk_ai/widgets/app_bar/appbar_trailing_image.dart';
@@ -60,6 +61,7 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
   bool isSendingMessage = false;
   User? currentUser;
   String? userId;
+  String _currentPromptText = ''; // Added to store the current prompt text
 
   @override
   @override
@@ -68,8 +70,33 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
     userId = currentUser?.email;
     _scrollController = ScrollController();
     // Load user messages and bot responses together
+    // Retrieve the stored first prompt
 
     super.initState();
+  }
+
+  void _getStoredFirstPrompt() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? storedPrompt = prefs.getString('firstPrompt');
+
+    print('Stored Prompt: $storedPrompt'); // Print stored prompt for debugging
+
+    if (storedPrompt != null && storedPrompt.isNotEmpty) {
+      // Use the stored prompt
+      setState(() {
+        _currentPromptText = storedPrompt;
+      });
+    } else {
+      // Set a default prompt if none is stored
+      _currentPromptText = "Default Prompt";
+      _saveFirstPrompt(_currentPromptText);
+    }
+  }
+
+  // Function to save the user's first prompt to shared preferences
+  void _saveFirstPrompt(String prompt) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('firstPrompt', prompt);
   }
 
   @override
@@ -268,7 +295,9 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
             suffix: GestureDetector(
               onTap: () {
                 if (!isSendingMessage) {
+                  _getStoredFirstPrompt();
                   _sendMessageToRasa();
+                  print(_currentPromptText);
                 }
               },
               child: Container(
@@ -313,63 +342,72 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
   }
 
   void _sendMessageToRasa({String? message}) async {
-    // Replace this with the actual URL of your Rasa API.
-    String rasaApiUrl = 'http://192.168.100.13:5005/webhooks/rest/webhook';
+    // Replace 'http://localhost:5000/predict' with the actual URL of your Flask API endpoint.
+    String apiUrl = 'http://192.168.100.9:5000/predict';
 
     // Get the message from the text field
     String userMessage = message ?? askMeAnythingController.text;
 
-    Message content = Message(
+    // Create a Message object for the user message
+    Message userMessageObject = Message(
       text: userMessage,
       sender: 'user',
       timestamp: Timestamp.now(),
     );
-    // Add user's message to the messages list
-    messages.add(content);
 
-    await storeUserMessage(content, userId!);
-    _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent,
-      duration: Duration(milliseconds: 300),
-      curve: Curves.easeOut,
-    );
+    // Add the user message to the messages list
+    messages.add(userMessageObject);
 
-    // Prepare the data to be sent to Rasa
+    // Update UI to reflect the new user message
+    setState(() {});
+
+    // Create a request body in JSON format
     Map<String, dynamic> requestData = {
-      "sender": "user",
       "message": userMessage,
     };
 
     try {
-      // Send a POST request to the Rasa API.
+      // Send a POST request to the Flask API.
       http.Response response = await http.post(
-        Uri.parse(rasaApiUrl),
+        Uri.parse(apiUrl),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(requestData),
       );
 
+      print(response.body);
+
       // Check if the request was successful (status code 200).
       if (response.statusCode == 200) {
-        // Parse the JSON response.
-        List<dynamic> jsonResponse = jsonDecode(response.body);
+        // Get the response message from the response body.
+        String botResponse = response.body;
 
-        // Map each JSON object to a Message object and add it to the messages list.
-        List<Message> botResponses = jsonResponse
-            .map((json) => Message(
-                  text: json['text'],
-                  sender: 'bot',
-                  timestamp: Timestamp.now(),
-                ))
-            .toList();
+        // Create a Message object for the bot response
+        Message botMessage = Message(
+          text: botResponse,
+          sender: 'bot',
+          timestamp: Timestamp.now(),
+        );
 
-        // Add bot responses to the messages list
-        messages.addAll(botResponses);
-        await storeBotResponses(botResponses, userId!);
+        // Add the bot message to the messages list
+        messages.add(botMessage);
+
+        // Scroll to the bottom of the ListView to show the latest message
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+
         // Clear the text field after sending the message.
         askMeAnythingController.clear();
 
         // Force a rebuild of the UI to reflect the updated messages list.
         setState(() {});
+
+        // Store user message to Firestore
+        await storeUserMessage(userMessageObject, userId!);
+        // Store bot response to Firestore
+        await storeBotResponses([botMessage], userId!);
       } else {
         print('Error: ${response.statusCode}');
       }
@@ -401,31 +439,30 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
   Future<void> storeUserMessage(Message message, String userId) async {
     try {
       if (userId != null) {
-        // Check if a document with the title already exists in bot_responses
-        CollectionReference<Map<String, dynamic>> collectionRef =
-            FirebaseFirestore.instance
-                .collection('messages')
-                .doc(userId)
-                .collection('user_responses');
-        DocumentReference<Map<String, dynamic>> documentRef =
-            collectionRef.doc(message.text);
+        // Collection reference for the 'messages' collection
+        CollectionReference<Map<String, dynamic>> messagesCollection =
+            FirebaseFirestore.instance.collection('histroy');
 
-        // Get the document snapshot
-        DocumentSnapshot<Map<String, dynamic>> documentSnapshot =
-            await documentRef.get();
+        // Document reference for the 'userID' document
+        DocumentReference<Map<String, dynamic>> userDocumentRef =
+            messagesCollection.doc(userId);
 
-        if (documentSnapshot.exists) {
-          // If the document exists, update the list of messages
-          await documentRef.update({
-            'messages': FieldValue.arrayUnion([message.toMap()])
-          });
-        } else {
-          // If the document doesn't exist, create a new one with the title and the first message
-          await documentRef.set({
-            'title': message.text,
-            'messages': [message.toMap()],
-          });
-        }
+        // Collection reference for the 'text of the first prompt asked' collection
+        CollectionReference<Map<String, dynamic>> firstPromptCollection =
+            userDocumentRef.collection('text_of_first_prompt_asked');
+
+        // Document reference for the 'text of the first prompt asked by the user' document
+        DocumentReference<Map<String, dynamic>> promptDocumentRef =
+            firstPromptCollection.doc(_currentPromptText);
+
+        // Collection reference for 'user_responses'
+        CollectionReference<Map<String, dynamic>> userResponsesCollection =
+            promptDocumentRef.collection('user_responses');
+
+        // Update or create the document with the user's messages
+        await userResponsesCollection.add({
+          'messages': FieldValue.arrayUnion([message.toMap()])
+        });
       } else {
         print('User ID is null');
       }
@@ -437,34 +474,32 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
   Future<void> storeBotResponses(List<Message> messages, String userId) async {
     try {
       if (userId != null) {
+        // Collection reference for the 'messages' collection
+        CollectionReference<Map<String, dynamic>> messagesCollection =
+            FirebaseFirestore.instance.collection('histroy');
+
+        // Document reference for the 'userID' document
+        DocumentReference<Map<String, dynamic>> userDocumentRef =
+            messagesCollection.doc(userId);
+
+        // Collection reference for the 'text of the first prompt asked' collection
+        CollectionReference<Map<String, dynamic>> firstPromptCollection =
+            userDocumentRef.collection('text_of_first_prompt_asked');
+
+        // Document reference for the 'text of the first prompt asked by the user' document
+        DocumentReference<Map<String, dynamic>> promptDocumentRef =
+            firstPromptCollection.doc(_currentPromptText);
+
+        // Collection reference for 'bot_responses'
+        CollectionReference<Map<String, dynamic>> botResponsesCollection =
+            promptDocumentRef.collection('bot_responses');
+
         // Loop through each bot response and store it individually
         for (Message message in messages) {
-          // Check if a document with the title already exists in bot_responses
-          CollectionReference<Map<String, dynamic>> collectionRef =
-              FirebaseFirestore.instance
-                  .collection('messages')
-                  .doc(userId)
-                  .collection(
-                      'bot_responses'); // Use 'bot_responses' for bot messages
-          DocumentReference<Map<String, dynamic>> documentRef =
-              collectionRef.doc(message.text);
-
-          // Get the document snapshot
-          DocumentSnapshot<Map<String, dynamic>> documentSnapshot =
-              await documentRef.get();
-
-          if (documentSnapshot.exists) {
-            // If the document exists, update the list of messages
-            await documentRef.update({
-              'messages': FieldValue.arrayUnion([message.toMap()])
-            });
-          } else {
-            // If the document doesn't exist, create a new one with the title and the first message
-            await documentRef.set({
-              'title': message.text,
-              'messages': [message.toMap()],
-            });
-          }
+          // Update or create the document with the bot's messages
+          await botResponsesCollection.add({
+            'messages': FieldValue.arrayUnion([message.toMap()])
+          });
         }
       } else {
         print('User ID is null');

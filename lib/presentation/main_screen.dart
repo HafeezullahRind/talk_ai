@@ -4,6 +4,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:talk_ai/core/app_export.dart';
+import 'package:talk_ai/core/utils/userPrompt_pref.dart';
 import 'package:talk_ai/presentation/home_screen/home_screen.dart';
 import 'package:talk_ai/presentation/profile_screen/profile_screen.dart';
 import 'package:talk_ai/presentation/save/save_screen.dart';
@@ -34,6 +35,8 @@ class _MainScreenState extends State<MainScreen> {
     _pageController = PageController();
     userProvider = Provider.of<UserProvider>(context, listen: false);
     getUserData();
+    // Clear the user prompt when MainScreen is initialized
+    UserPromptPre.clearPrompt();
   }
 
   bool isUserDataFetched = false;

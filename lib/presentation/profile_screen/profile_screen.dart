@@ -3,10 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:talk_ai/core/app_export.dart';
+import 'package:talk_ai/presentation/terms_of_service/TermsOfServiceScreen.dart';
 import 'package:talk_ai/widgets/custom_switch.dart';
 
 import '../../Provider/user_provider.dart';
 import '../../core/utils/snackbar.dart';
+import '../privacy_policy_Screen/PrivacyPolicyScreen.dart';
 
 // ignore_for_file: must_be_immutable
 class ProfileScreen extends StatelessWidget {
@@ -63,15 +65,28 @@ class ProfileScreen extends StatelessWidget {
                                   editProfile: "Edit Profile"),
                             ),
                             _buildNotificationsList(context),
-                            _buildLanguagesList(context,
-                                globe: ImageConstant.imgGlobe,
-                                editProfile: "Languages"),
-                            _buildLanguagesList(context,
-                                globe: ImageConstant.imgFile,
-                                editProfile: "Terms of service"),
-                            _buildLanguagesList(context,
-                                globe: ImageConstant.imgFile,
-                                editProfile: "Privacy Policy")
+                            GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        TermsOfServiceScreen()),
+                              ),
+                              child: _buildLanguagesList(context,
+                                  globe: ImageConstant.imgFile,
+                                  editProfile: "Terms of service"),
+                            ),
+                            GestureDetector(
+                              onTap: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                    builder: (context) =>
+                                        PrivacyPolicyScreen()),
+                              ),
+                              child: _buildLanguagesList(context,
+                                  globe: ImageConstant.imgFile,
+                                  editProfile: "Privacy Policy"),
+                            )
                           ]);
                     },
                   )),
