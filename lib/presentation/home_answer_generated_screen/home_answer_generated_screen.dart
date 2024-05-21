@@ -103,8 +103,8 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-        resizeToAvoidBottomInset: false,
-        // appBar: _buildAppBar(context),
+        resizeToAvoidBottomInset:
+            true, // Set to true to avoid keyboard covering the text field
         body: Container(
           width: double.maxFinite,
           padding: EdgeInsets.symmetric(
@@ -342,11 +342,18 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
   }
 
   void _sendMessageToRasa({String? message}) async {
-    // Replace 'http://localhost:5000/predict' with the actual URL of your Flask API endpoint.
-    String apiUrl = 'http://192.168.100.9:5000/predict';
-
     // Get the message from the text field
-    String userMessage = message ?? askMeAnythingController.text;
+    String userMessage = message ?? askMeAnythingController.text.trim();
+    String apiUrl = 'http://192.168.100.2:5000/predict';
+
+    // Check if the user message is empty
+    if (userMessage.isEmpty) {
+      // Show a SnackBar or other feedback to the user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please enter a message')),
+      );
+      return; // Do not proceed if the message is empty
+    }
 
     // Create a Message object for the user message
     Message userMessageObject = Message(
@@ -452,15 +459,11 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
             userDocumentRef.collection('text_of_first_prompt_asked');
 
         // Document reference for the 'text of the first prompt asked by the user' document
-        DocumentReference<Map<String, dynamic>> promptDocumentRef =
-            firstPromptCollection.doc(_currentPromptText);
 
-        // Collection reference for 'user_responses'
-        CollectionReference<Map<String, dynamic>> userResponsesCollection =
-            promptDocumentRef.collection('user_responses');
+        // Collection reference for 'user_responses
 
         // Update or create the document with the user's messages
-        await userResponsesCollection.add({
+        await firstPromptCollection.add({
           'messages': FieldValue.arrayUnion([message.toMap()])
         });
       } else {
@@ -486,18 +489,10 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
         CollectionReference<Map<String, dynamic>> firstPromptCollection =
             userDocumentRef.collection('text_of_first_prompt_asked');
 
-        // Document reference for the 'text of the first prompt asked by the user' document
-        DocumentReference<Map<String, dynamic>> promptDocumentRef =
-            firstPromptCollection.doc(_currentPromptText);
-
-        // Collection reference for 'bot_responses'
-        CollectionReference<Map<String, dynamic>> botResponsesCollection =
-            promptDocumentRef.collection('bot_responses');
-
         // Loop through each bot response and store it individually
         for (Message message in messages) {
           // Update or create the document with the bot's messages
-          await botResponsesCollection.add({
+          await firstPromptCollection.add({
             'messages': FieldValue.arrayUnion([message.toMap()])
           });
         }
