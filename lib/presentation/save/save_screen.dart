@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:shimmer/shimmer.dart';
 
 class SaveScreen extends StatefulWidget {
   const SaveScreen({Key? key}) : super(key: key);
@@ -24,9 +25,7 @@ class _SaveScreenState extends State<SaveScreen> {
             .snapshots(),
         builder: (BuildContext context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(
-              child: CircularProgressIndicator(),
-            );
+            return _buildShimmerEffect(); // Show shimmer effect while loading
           }
           if (snapshot.hasError) {
             return Center(
@@ -64,64 +63,79 @@ class _SaveScreenState extends State<SaveScreen> {
             itemBuilder: (BuildContext context, int index) {
               String date = groupedHistory.keys.elementAt(index);
               List<Map<String, String>> messages = groupedHistory[date]!;
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: Text(
-                      _formatDateHeader(date),
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18.0,
-                      ),
-                    ),
-                  ),
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: NeverScrollableScrollPhysics(),
-                    itemCount: messages.length,
-                    itemBuilder: (BuildContext context, int index) {
-                      return Dismissible(
-                        key: Key(messages[index]["timestamp"]!),
-                        direction: DismissDirection.endToStart,
-                        background: Container(
-                          color: Colors.red,
-                          alignment: Alignment.centerRight,
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(horizontal: 20.0),
-                            child: Icon(
-                              Icons.delete,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                        onDismissed: (direction) async {
-                          // Delete the item from Firestore
-                          await FirebaseFirestore.instance
-                              .collection('histroy')
-                              .doc('hafeezullah7008@gmail.com')
-                              .collection('text_of_first_prompt_asked')
-                              .doc(messages[index]["docID"])
-                              .delete();
-                          setState(() {
-                            // Remove the dismissed item from the list
-                            messages.removeAt(index);
-                          });
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("Chat history deleted")),
-                          );
-                        },
-                        child: _buildChatItem(messages[index]),
-                      );
-                    },
-                  ),
-                ],
-              );
+              return _buildExpansionTile(date, messages);
             },
           );
         },
       ),
+    );
+  }
+
+  Widget _buildShimmerEffect() {
+    return ListView.builder(
+      itemCount: 5, // Adjust the number of shimmer items as needed
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: Colors.grey[300],
+              radius: 25.0,
+            ),
+            title: Container(
+              height: 16.0,
+              color: Colors.grey[300],
+            ),
+            subtitle: Container(
+              height: 16.0,
+              color: Colors.grey[300],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildExpansionTile(String date, List<Map<String, String>> messages) {
+    return ExpansionTile(
+      title: Text(
+        _formatDateHeader(date),
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 18.0,
+        ),
+      ),
+      children: messages.map((message) {
+        return Dismissible(
+          key: Key(message["timestamp"]!),
+          direction: DismissDirection.endToStart,
+          background: Container(
+            color: Colors.red,
+            alignment: Alignment.centerRight,
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.0),
+              child: Icon(
+                Icons.delete,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          onDismissed: (direction) async {
+            // Delete the item from Firestore
+            await FirebaseFirestore.instance
+                .collection('histroy')
+                .doc('hafeezullah7008@gmail.com')
+                .collection('text_of_first_prompt_asked')
+                .doc(message["docID"])
+                .delete();
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Chat history deleted")),
+            );
+          },
+          child: _buildChatItem(message),
+        );
+      }).toList(),
     );
   }
 
@@ -134,7 +148,7 @@ class _SaveScreenState extends State<SaveScreen> {
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         decoration: BoxDecoration(
-          color: isUser ? Colors.blue.withOpacity(0.2) : Colors.grey[200],
+          color: isUser ? Colors.grey.withOpacity(0.5) : Colors.grey[200],
           borderRadius: BorderRadius.circular(16.0),
         ),
         padding: EdgeInsets.all(12.0),
@@ -158,8 +172,7 @@ class _SaveScreenState extends State<SaveScreen> {
                     // Implement action on icon press
                   },
                   icon: Icon(
-                    Icons.favorite,
-                    color: Colors.red,
+                    Icons.favorite_border,
                   ),
                 ),
               ],

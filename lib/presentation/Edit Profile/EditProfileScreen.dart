@@ -7,6 +7,7 @@ import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:talk_ai/core/app_export.dart';
 import 'package:talk_ai/widgets/custom_outlined_button.dart';
 
@@ -74,7 +75,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     _pickImage();
                   },
                   child: userProvider.imageUrl == null
-                      ? CircularProgressIndicator()
+                      ? _buildShimmerAvatar()
                       : CircleAvatar(
                           radius: 64.0,
                           backgroundImage: NetworkImage(
@@ -130,6 +131,17 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildShimmerAvatar() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[300]!,
+      highlightColor: Colors.grey[100]!,
+      child: CircleAvatar(
+        radius: 64.0,
+        backgroundColor: Colors.white,
       ),
     );
   }

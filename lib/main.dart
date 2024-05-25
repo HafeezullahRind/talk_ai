@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
           theme: theme,
           title: 'Talk AI',
           debugShowCheckedModeBanner: false,
-          initialRoute: AppRoutes.sigin_in,
+          initialRoute: AppRoutes.splashScreen,
           routes: AppRoutes.routes,
         );
       },

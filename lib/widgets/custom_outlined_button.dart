@@ -17,7 +17,8 @@ class CustomOutlinedButton extends BaseButton {
     double? height,
     double? width,
     EdgeInsets? margin,
-    required String text, CircularProgressIndicator? child,
+    required String text,
+    CircularProgressIndicator? child,
   }) : super(
           text: text,
           onPressed: onPressed,

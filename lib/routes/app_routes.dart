@@ -6,6 +6,7 @@ import 'package:talk_ai/presentation/home_screen/home_screen.dart';
 import 'package:talk_ai/presentation/main_screen.dart';
 import 'package:talk_ai/presentation/profile_screen/profile_screen.dart';
 import 'package:talk_ai/presentation/sign_up_screen/sign_up_screen.dart';
+import 'package:talk_ai/presentation/splash_screen/splash_screen.dart';
 import 'package:talk_ai/presentation/verify_email/verify_email.dart';
 import 'package:talk_ai/presentation/save/save_screen.dart';
 
@@ -13,6 +14,8 @@ import '../presentation/sign_in/sign_in.dart';
 
 class AppRoutes {
   static const String signUpScreen = '/sign_up_screen';
+    static const String splashScreen = '/splash_screen';
+
   static const String add_user = '/sign_up_screen';
   static const String homeScreen = '/add_users';
 
@@ -31,6 +34,7 @@ class AppRoutes {
   static const String appNavigationScreen = '/app_navigation_screen';
   static const String verify_email = '/verify_email_screen';
   static Map<String, WidgetBuilder> routes = {
+    splashScreen: (context) => SplashScreen(),
     signUpScreen: (context) => SignUpScreen(),
     homeScreen: (context) => HomeScreen(),
     homeAnswerGeneratedScreen: (context) => HomeAnswerGeneratedScreen(),

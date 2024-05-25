@@ -8,10 +8,10 @@ void showCustomMaterialBanner({
   required String title,
   required String body,
   required ContentType contentType,
-  
 }) {
   final materialBanner = SnackBar(
     duration: Duration(seconds: 1),
+
     /// need to set following properties for best effect of awesome_snackbar_content
     elevation: 0,
     behavior: SnackBarBehavior.floating,
@@ -21,7 +21,6 @@ void showCustomMaterialBanner({
       message: body,
       contentType: contentType,
       inMaterialBanner: true,
-
     ),
     // actions: const [SizedBox.shrink()],
   );
@@ -31,5 +30,4 @@ void showCustomMaterialBanner({
     ..showSnackBar(materialBanner);
 
   // Use a Timer to hide the MaterialBanner after the specified duration
-  
 }

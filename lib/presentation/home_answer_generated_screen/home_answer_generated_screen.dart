@@ -4,12 +4,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_tts/flutter_tts.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:talk_ai/core/app_export.dart';
-import 'package:talk_ai/widgets/app_bar/appbar_leading_image.dart';
-import 'package:talk_ai/widgets/app_bar/appbar_trailing_image.dart';
-import 'package:talk_ai/widgets/app_bar/custom_app_bar.dart';
 import 'package:talk_ai/widgets/custom_icon_button.dart';
 import 'package:talk_ai/widgets/custom_text_form_field.dart';
 
@@ -62,41 +61,85 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
   User? currentUser;
   String? userId;
   String _currentPromptText = ''; // Added to store the current prompt text
+  FlutterTts flutterTts = FlutterTts();
+  stt.SpeechToText _speech = stt.SpeechToText();
+  bool _isListening = false;
+  bool _speechEnabled = false;
 
   @override
-  @override
   void initState() {
+    super.initState();
     currentUser = _auth.currentUser;
     userId = currentUser?.email;
     _scrollController = ScrollController();
-    // Load user messages and bot responses together
-    // Retrieve the stored first prompt
+    _getStoredFirstPrompt();
+    _initSpeech();
+  }
 
-    super.initState();
+  void _initSpeech() async {
+    _speechEnabled = await _speech.initialize();
+    setState(() {});
   }
 
   void _getStoredFirstPrompt() async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? storedPrompt = prefs.getString('firstPrompt');
 
-    print('Stored Prompt: $storedPrompt'); // Print stored prompt for debugging
-
     if (storedPrompt != null && storedPrompt.isNotEmpty) {
-      // Use the stored prompt
       setState(() {
         _currentPromptText = storedPrompt;
       });
     } else {
-      // Set a default prompt if none is stored
       _currentPromptText = "Default Prompt";
       _saveFirstPrompt(_currentPromptText);
     }
   }
 
-  // Function to save the user's first prompt to shared preferences
   void _saveFirstPrompt(String prompt) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('firstPrompt', prompt);
+  }
+
+  void _listen() async {
+    if (!_isListening) {
+      // Check if the speech recognition engine is already initialized
+      if (!_speech.isAvailable) {
+        // Initialize the speech recognition engine if it's not available
+        bool available = await _speech.initialize(
+          onStatus: (val) => setState(() => _isListening = val == 'listening'),
+          onError: (val) => print('onError: $val'),
+        );
+
+        if (!available) {
+          // Handle case where initialization failed
+          print('Speech recognition initialization failed');
+          return;
+        }
+      }
+
+      // Set _isListening to true to indicate that the engine is listening
+      setState(() => _isListening = true);
+
+      // Start listening for speech input
+      _speech.listen(
+        onResult: (val) => setState(() {
+          askMeAnythingController.text = val.recognizedWords;
+          if (val.finalResult) {
+            _sendMessageToRasa();
+          }
+        }),
+      );
+    } else {
+      // If the engine is already listening, stop it
+      setState(() => _isListening = false);
+      _speech.stop();
+    }
+  }
+
+  Future<void> _speak(String text) async {
+    await flutterTts.setLanguage("en-US");
+    await flutterTts.setPitch(1.0);
+    await flutterTts.speak(text);
   }
 
   @override
@@ -123,29 +166,6 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return CustomAppBar(
-      leadingWidth: 52.h,
-      leading: AppbarLeadingImage(
-        imagePath: ImageConstant.imgMegaphone,
-        margin: EdgeInsets.only(
-          left: 20.h,
-          top: 8.v,
-          bottom: 8.v,
-        ),
-      ),
-      actions: [
-        AppbarTrailingImage(
-          imagePath: ImageConstant.imgHugeIconUser,
-          margin: EdgeInsets.symmetric(
-            horizontal: 20.h,
-            vertical: 8.v,
-          ),
-        ),
-      ],
     );
   }
 
@@ -207,53 +227,71 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
                 indent: 8.h,
               ),
               SizedBox(height: 16.v),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 8.h),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CustomImageView(
-                      imagePath: ImageConstant.imgIconOutlineLike,
-                      height: 24.adaptSize,
-                      width: 24.adaptSize,
-                    ),
-                    CustomImageView(
-                      imagePath: ImageConstant.imgIconOutlineDislike,
-                      height: 24.adaptSize,
-                      width: 24.adaptSize,
-                      margin: EdgeInsets.only(left: 12.h),
-                    ),
-                    Spacer(),
-                    GestureDetector(
-                      onTap: () => _copyToClipboard(text),
-                      child: Row(
-                        children: [
-                          CustomImageView(
-                            imagePath: ImageConstant.imgThumbsUp,
-                            height: 20.adaptSize,
-                            width: 20.adaptSize,
-                            margin: EdgeInsets.only(bottom: 2.v),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CustomImageView(
+                    imagePath: ImageConstant.imgIconOutlineLike,
+                    height: 24.adaptSize,
+                    width: 24.adaptSize,
+                  ),
+                  CustomImageView(
+                    imagePath: ImageConstant.imgIconOutlineDislike,
+                    height: 24.adaptSize,
+                    width: 24.adaptSize,
+                    margin: EdgeInsets.only(left: 12.h),
+                  ),
+                  Spacer(),
+                  GestureDetector(
+                    onTap: () => _copyToClipboard(text),
+                    child: Row(
+                      children: [
+                        CustomImageView(
+                          imagePath: ImageConstant.imgThumbsUp,
+                          height: 20.adaptSize,
+                          width: 20.adaptSize,
+                          margin: EdgeInsets.only(bottom: 2.v),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.only(
+                            left: 5.h,
+                            top: 3.v,
                           ),
-                          Padding(
-                            padding: EdgeInsets.only(
-                              left: 5.h,
-                              top: 3.v,
-                            ),
-                            child: Text(
-                              "Copy",
-                              style: TextStyle(
-                                color: theme.colorScheme.primary,
-                                fontSize: 17.fSize,
-                                fontFamily: 'Rubik',
-                                fontWeight: FontWeight.w400,
-                              ),
+                          child: Text(
+                            "Copy",
+                            style: TextStyle(
+                              color: theme.colorScheme.primary,
+                              fontSize: 17.fSize,
+                              fontFamily: 'Rubik',
+                              fontWeight: FontWeight.w400,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  SizedBox(
+                    width: 12.h,
+                  ), // Add space between copy button and listen button
+                  GestureDetector(
+                    onTap: () {
+                      _speak(
+                          text); // Speak bot response when Listen button is tapped
+                    },
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.volume_up,
+                          color: theme.colorScheme.primary,
+                          size: 24,
+                        ),
+                        SizedBox(
+                          width: 10,
+                        )
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -297,7 +335,6 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
                 if (!isSendingMessage) {
                   _getStoredFirstPrompt();
                   _sendMessageToRasa();
-                  print(_currentPromptText);
                 }
               },
               child: Container(
@@ -324,7 +361,7 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
         Padding(
           padding: EdgeInsets.only(left: 8.h),
           child: CustomIconButton(
-            onTap: () => _reloadResponse(),
+            onTap: () => _listen(), // Add listen functionality
             decoration: BoxDecoration(
                 color: Colors.white10,
                 borderRadius: BorderRadius.circular(20),
@@ -332,9 +369,9 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
             height: 60.adaptSize,
             width: 60.adaptSize,
             padding: EdgeInsets.all(12.h),
-            child: CustomImageView(
-              imagePath: ImageConstant.imgIconFillReload,
-            ),
+            child: _isListening
+                ? CircularProgressIndicator() // Show recording indicator
+                : Icon(Icons.mic),
           ),
         ),
       ],
@@ -342,78 +379,57 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
   }
 
   void _sendMessageToRasa({String? message}) async {
-    // Get the message from the text field
     String userMessage = message ?? askMeAnythingController.text.trim();
     String apiUrl = 'http://192.168.100.2:5000/predict';
 
-    // Check if the user message is empty
     if (userMessage.isEmpty) {
-      // Show a SnackBar or other feedback to the user
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Please enter a message')),
       );
-      return; // Do not proceed if the message is empty
+      return;
     }
 
-    // Create a Message object for the user message
     Message userMessageObject = Message(
       text: userMessage,
       sender: 'user',
       timestamp: Timestamp.now(),
     );
 
-    // Add the user message to the messages list
     messages.add(userMessageObject);
-
-    // Update UI to reflect the new user message
     setState(() {});
 
-    // Create a request body in JSON format
     Map<String, dynamic> requestData = {
       "message": userMessage,
     };
 
     try {
-      // Send a POST request to the Flask API.
       http.Response response = await http.post(
         Uri.parse(apiUrl),
         headers: {"Content-Type": "application/json"},
         body: jsonEncode(requestData),
       );
 
-      print(response.body);
-
-      // Check if the request was successful (status code 200).
       if (response.statusCode == 200) {
-        // Get the response message from the response body.
         String botResponse = response.body;
 
-        // Create a Message object for the bot response
         Message botMessage = Message(
           text: botResponse,
           sender: 'bot',
           timestamp: Timestamp.now(),
         );
 
-        // Add the bot message to the messages list
         messages.add(botMessage);
 
-        // Scroll to the bottom of the ListView to show the latest message
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
           duration: Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
 
-        // Clear the text field after sending the message.
         askMeAnythingController.clear();
-
-        // Force a rebuild of the UI to reflect the updated messages list.
         setState(() {});
 
-        // Store user message to Firestore
         await storeUserMessage(userMessageObject, userId!);
-        // Store bot response to Firestore
         await storeBotResponses([botMessage], userId!);
       } else {
         print('Error: ${response.statusCode}');
@@ -423,46 +439,18 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
     }
   }
 
-  void _reloadResponse() {
-    // Find the last user message in the messages list
-    Message lastUserMessage = messages.lastWhere(
-      (message) => message.sender == 'user',
-      orElse: () => Message(
-        text: "",
-        sender: 'user',
-        timestamp: Timestamp.now(),
-      ),
-    );
-
-    // Get the text of the last user message
-    String userMessage = lastUserMessage.text;
-
-    // Resend the last user message to the Rasa API
-    if (userMessage.isNotEmpty) {
-      _sendMessageToRasa(message: userMessage);
-    }
-  }
-
   Future<void> storeUserMessage(Message message, String userId) async {
     try {
       if (userId != null) {
-        // Collection reference for the 'messages' collection
         CollectionReference<Map<String, dynamic>> messagesCollection =
-            FirebaseFirestore.instance.collection('histroy');
+            FirebaseFirestore.instance.collection('history');
 
-        // Document reference for the 'userID' document
         DocumentReference<Map<String, dynamic>> userDocumentRef =
             messagesCollection.doc(userId);
 
-        // Collection reference for the 'text of the first prompt asked' collection
         CollectionReference<Map<String, dynamic>> firstPromptCollection =
             userDocumentRef.collection('text_of_first_prompt_asked');
 
-        // Document reference for the 'text of the first prompt asked by the user' document
-
-        // Collection reference for 'user_responses
-
-        // Update or create the document with the user's messages
         await firstPromptCollection.add({
           'messages': FieldValue.arrayUnion([message.toMap()])
         });
@@ -477,21 +465,16 @@ class _HomeAnswerGeneratedScreenState extends State<HomeAnswerGeneratedScreen> {
   Future<void> storeBotResponses(List<Message> messages, String userId) async {
     try {
       if (userId != null) {
-        // Collection reference for the 'messages' collection
         CollectionReference<Map<String, dynamic>> messagesCollection =
-            FirebaseFirestore.instance.collection('histroy');
+            FirebaseFirestore.instance.collection('history');
 
-        // Document reference for the 'userID' document
         DocumentReference<Map<String, dynamic>> userDocumentRef =
             messagesCollection.doc(userId);
 
-        // Collection reference for the 'text of the first prompt asked' collection
         CollectionReference<Map<String, dynamic>> firstPromptCollection =
             userDocumentRef.collection('text_of_first_prompt_asked');
 
-        // Loop through each bot response and store it individually
         for (Message message in messages) {
-          // Update or create the document with the bot's messages
           await firstPromptCollection.add({
             'messages': FieldValue.arrayUnion([message.toMap()])
           });

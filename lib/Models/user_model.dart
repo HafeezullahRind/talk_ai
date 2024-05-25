@@ -32,5 +32,3 @@ class UserModel {
     return 'UserModel{name: $name, email: $email, username: $username, }';
   }
 }
-
-

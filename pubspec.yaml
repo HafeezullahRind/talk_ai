@@ -20,10 +20,15 @@ dependencies:
   http: ^1.1.0
   shared_preferences: ^2.2.2
   intl: ^0.18.1
+  flutter_tts:
+  speech_to_text:
+  shimmer:
+
   
 dev_dependencies: 
   flutter_test: 
     sdk: flutter
+  lottie:
 flutter: 
   uses-material-design: true
   assets: 

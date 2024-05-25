@@ -1,4 +1,3 @@
-
 class Prompt {
   String? recipientId;
   String? text;
@@ -6,10 +5,10 @@ class Prompt {
   Prompt({this.recipientId, this.text});
 
   Prompt.fromJson(Map<String, dynamic> json) {
-    if(json["recipient_id"] is String) {
+    if (json["recipient_id"] is String) {
       recipientId = json["recipient_id"];
     }
-    if(json["text"] is String) {
+    if (json["text"] is String) {
       text = json["text"];
     }
   }

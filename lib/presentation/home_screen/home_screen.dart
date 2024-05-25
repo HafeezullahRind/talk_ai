@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:talk_ai/core/app_export.dart';
 import 'package:talk_ai/widgets/custom_text_form_field.dart';
-import 'package:http/http.dart' as http;
 
 class HomeScreen extends StatelessWidget {
   HomeScreen({Key? key})
@@ -49,7 +48,7 @@ class HomeScreen extends StatelessWidget {
                 margin: EdgeInsets.symmetric(horizontal: 11.h),
                 child: Text(
                   "I'm here to help you with whatever you need, from answering questions to providing recommendations. Let's chat!",
-                  maxLines: 3,
+                  maxLines: 4,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
                   style: TextStyle(
@@ -64,7 +63,7 @@ class HomeScreen extends StatelessWidget {
               SizedBox(
                 width: 230.h,
                 child: Text(
-                  "Example: Some text example goes in here",
+                  "Example: What can you do",
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   textAlign: TextAlign.center,
